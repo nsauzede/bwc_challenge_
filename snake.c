@@ -37,7 +37,13 @@ void sdldraw(state_t state, sdlstate_t *sdlstate) {
         rect.y = balld * d_y;
         rect.w = balld;
         rect.h = balld;
-        col = SDL_MapRGB(sdlstate->screen->format, 255*(MAX_LEN-i)/MAX_LEN, 0, 0);
+        int r, g, b;
+        if (state.len >= MAX_LEN) {
+            r = 0; g = 0; b = 255*(MAX_LEN-i)/MAX_LEN;
+        } else {
+            r = 255*(MAX_LEN-i)/MAX_LEN; g = 0; b = 0;
+        }
+        col = SDL_MapRGB(sdlstate->screen->format, r, g, b);
         SDL_FillRect(sdlstate->screen, &rect, col);
         dir_ >>= 2;
     }
@@ -97,8 +103,21 @@ int main() {
             break;
 
         uint64_t data = state_to_data(state);
-        data = evolve(data);
-        state = data_to_state(data);
+        if (!state.dead && state.len < MAX_LEN) {
+            int current = state.len;
+            data = evolve(data);
+            state = data_to_state(data);
+            if (state.len > current) {
+                printf("You ate food! (len=%d)\n", state.len);
+            }
+            if (state.dead || state.len >= MAX_LEN) {
+                if (state.dead)
+                    printf("DEAD!");
+                if (state.len >= MAX_LEN)
+                    printf("YOU WIN!");
+                printf(" GAME OVER! (len=%d)\n", state.len);
+            }
+        }
         sdldraw(state, &sdlstate);
 
         SDL_UpdateTexture(sdlTexture, NULL, screen->pixels, screen->pitch);
